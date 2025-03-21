@@ -290,5 +290,18 @@ todosIguales (n:ns)
     Calcula el producto de todos los nodos del árbol
 -}
 
+data AB a = Nil | Bin (AB a) a (AB a)
 
+vacio :: AB a -> Bool
+vacio Nil = True
+vacio _ = False
 
+negacion :: AB Bool -> AB Bool
+negacion Nil = Nil
+negacion (Bin l v r) = Bin (negacion l) (not v) (negacion r)
+
+producto :: AB Int -> Int
+producto Nil = 1
+producto (Bin l v r) = v * producto l * producto r
+
+-- ejemplo = Bin (Bin Nil 1 Nil) 2 (Bin Nil 3 Nil)
