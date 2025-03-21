@@ -1,4 +1,3 @@
-import Data.List (intersect)
 {-
     Ejercicio 1: Dar el tipo y describir el comportamiento de las siguientes funciones del módulo Prelude de Haskell:
 
