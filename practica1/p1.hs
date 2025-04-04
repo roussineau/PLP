@@ -65,3 +65,41 @@ dosVeces f = f . f
                     = (*2) 2
                     = 4
 -}
+
+{-
+    Ejercicio de TDA, implementación de pseudocódigo de la guía de Backtracking punto 1
+    Toma un multiconjunto, su longitud-1, y el número que queremos sumar entre los elementos.
+    Devuelve si existe o no esa suma
+-}
+subsetSum :: [Int] -> Int -> Int -> Bool
+subsetSum _ 0 j = j == 0
+subsetSum cs i j = subsetSum cs (i-1) j || subsetSum cs (i-1) (j - cs !! i)
+
+{-
+    Ejercicio 2:
+    i) Definir la función curry, que dada una función de dos argumentos, define su equivalente currificada
+    ii) Definir la función uncurry, que dada una función currificada de dos argumentos, devuelve ibidem
+    iii) ¿Se podría definir una función curryN, que tome una función de un número n de argumentos y devuelva su versión currificada?
+        Sugerencia: pensar cuál sería el tipo de la función
+
+        A priori yo contestaría que no es posible, no al menos con las condiciones planteadas por la consigna.
+        Para empezar, al tratar de pensar su tipo nos encontramos con que necesitamos saber cuántos parámetros
+        tiene la función. Quizás sí se podría pasando la cantidad de parámetros de la función como parámetro,
+        además de la función. O sea, pasando dos parámetros.
+-}
+
+curry' :: ((a, b) -> c) -> a -> b -> c
+curry' f =  (\a b -> f (a,b)) -- La escribo como función lambda porque así se entiende mejor
+
+uncurry' :: (a -> b -> c) -> (a,b) -> c
+uncurry' f = (\(a,b) -> f a b)
+
+
+data Nat = Zero | Succ Nat deriving Show
+
+sumar :: Nat -> Nat -> Nat
+sumar Zero n     = n
+sumar (Succ n) m = Succ (sumar n m)
+
+
+
