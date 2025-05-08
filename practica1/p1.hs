@@ -13,7 +13,7 @@ max2 (x, y)
     | otherwise = y
 -- No está currificada. Currificada:
 max2currified :: Float -> Float -> Float
-max2currified = max
+max2currified = (\x y -> if x > y then x else y)
 
 
 normalVectorial :: (Float, Float) -> Float
@@ -100,6 +100,7 @@ data Nat = Zero | Succ Nat deriving Show
 sumar :: Nat -> Nat -> Nat
 sumar Zero n     = n
 sumar (Succ n) m = Succ (sumar n m)
+
 
 
 {-
@@ -299,20 +300,56 @@ sacarUna x = recr (\y ys rec -> if x == y then ys else y:rec) []
     el primer elemento coincidente para de esa forma sacar solo el primero y no todos.
 -}
 insertarOrdenado :: Ord a => a -> [a] -> [a]
-insertarOrdenado x = recr (step x) [x]
-    where step x y ys rec 
-            | y>=x = x:y:ys
-            | otherwise = y:rec
+insertarOrdenado x = recr (\y ys rec -> if y >= x then x:y:ys else y:rec) [x]
 {-
     recr :: (a -> [a] -> b -> b) -> b -> [a] -> b
     recr _ z [] = z
     recr f z (x:xs) = f x xs (recr f z xs)
+
+    insertarOrdenado 7 [1,2,3]
+    recr (\y ys rec -> if y>=x then x:y:ys else y: rec) [7] [1,2,3]
+-- z = [7], x = 1, xs = [2,3] 
+    (\y ys rec -> if y>=7 then 7:y:ys else y:rec) 1 [2,3] (recr (\y ys rec -> if y>=7 then 7:y:ys else y:rec) [7] [2,3])
+    1:(recr (\y ys rec -> if y>=7 then 7:y:ys else y:rec) [7] [2,3])
+    1:((\y ys rec -> if y>=7 then 7:y:ys else y:rec) 2 [3] (recr (\y ys rec -> if y>=7 then 7:y:ys else y:rec) [7] [3]))
+    1:2:(recr (\y ys rec -> if y>=7 then 7:y:ys else y:rec) [7] [3])
+    1:2:((\y ys rec -> if y>=7 then 7:y:ys else y:rec) 3 [] (recr (\y ys rec -> if y>=7 then 7:y:ys else y:rec) [7] []))
+    1:2:3:(recr (\y ys rec -> if y>=7 then 7:y:ys else y:rec) [7] [])
+    1:2:3:[7]
+    [1,2,3,7]
+
 >>> insertarOrdenado 7 []
 [7]
 
 >>> insertarOrdenado 7 [2]
 [2,7]
 
->>> insertarOrdenado 7 [2,11]
-[2,7,11]
+>>> insertarOrdenado 7 [2,11,12]
+[2,7,11,12]
 -}
+
+
+-- Ejercicio 12:
+data AB a = Nil | Bin (AB a) a (AB a) deriving Show
+
+foldAB :: (b -> a -> b -> b) -> b -> AB a -> b
+foldAB f base Nil = base
+foldAB f base (Bin izq v der) = f (foldAB f base izq) v (foldAB f base der)
+
+recAB :: (b -> AB a -> a -> AB a -> b -> b) -> b -> AB a -> b
+recAB f base Nil = base
+recAB f base (Bin izq v der) = f (recAB f base izq) izq v der (recAB f base der)
+
+esNil :: AB a -> Bool
+esNil Nil = True
+esNil _ = False
+
+alturaExpl :: AB a -> Int
+alturaExpl Nil = 0
+alturaExpl (Bin izq v der) = 1 + max (alturaExpl izq) (alturaExpl der)
+
+altura :: AB a -> Int
+altura = foldAB (\hIzq _ hDer -> 1 + max hIzq hDer) 0
+
+cantNodos :: AB a -> Int
+cantNodos = foldAB (\nIzq _ nDer -> 1 + nIzq + nDer) 0
