@@ -1,3 +1,5 @@
+% El motor de búsqueda de Prolog:
+
 % Ejercicio 1)
 padre(juan, carlos).
 padre(juan, luis).
@@ -134,6 +136,9 @@ menorOIgualCorregido(X, X) :- natural(X).
 menorOIgualCorregido(X, suc(Y)) :- natural(Y), menorOIgual(X, Y).
 
 
+
+% Operaciones sobre listas:
+
 % Ejercicio 4)
 juntar([], Ys, Ys).
 juntar([X | Xs], Ys, [X | Ls]) :- juntar(Xs, Ys, Ls).
@@ -252,3 +257,201 @@ reparto(L, N, [X | Ls]) :-
     reparto(Xs, M, Ls).
 % vi.
 % repartoSinVacias(+L, -LListas).
+repartoSinVacias(X, [X]) :- length(X, LX), LX > 0.
+repartoSinVacias(Original, [X | Xs]) :-
+    append(X, Ys, Original),
+    length(X, LX),
+    LX > 0,
+    repartoSinVacias(Ys, Xs).
+
+
+% Ejercicio 8)
+% parteQueSuma(+L, +S, -P).
+parteQueSuma(_, 0, []).
+parteQueSuma([X | Ls], S, [X | Xs]) :-
+    Resto is S-X,
+    Resto >= 0,
+    parteQueSuma(Ls, Resto, Xs).
+parteQueSuma([_ | Ls], S, P) :-
+    S >= 0,
+    parteQueSuma(Ls, S, P).
+
+
+
+% Instanciación y reversibilidad:
+
+% Ejercicio 9)
+desde(X, X).
+desde(X, Y) :- N is X+1, desde(N, Y).
+/*
+    i) Si instanciamos solo el primer parámetro, podemos tener los números desde
+    X hasta el infinito, sin detenernos, por lo que tendría que preguntar si se
+    considera como colgado o no.
+    Si instanciamos solo el segundo parámetro, unifica solo con la primera ecuación,
+    pues la segunda requiere que el primero esté instanciado. Luego da error.
+    Si instanciamos ambos, nos da una lista desde X hasta Y, pero para que no se
+    cuelgue requerimos que X sea menor o igual a Y.
+
+    ii) Dar una versión del predicado que funcione con la instanciación:
+*/
+% desdeReversible(+X, ?Y). Preguntar como hacer sin el corte.
+desdeReversible(X,X).
+desdeReversible(X,Y) :- nonvar(Y), X =< Y.
+desdeReversible(X,Y) :- var(Y), N is X+1, desde(N,Y).
+
+
+% Ejercicio 10)
+% intercalar(L1, L2, L3).
+intercalar(X, [], X).
+intercalar([], X, X).
+intercalar([X | Xs], [Y | Ys], [X | [Y | Zs]]) :- intercalar(Xs, Ys, Zs).
+/*
+    Es reversible, aunque hay que tener ojo con la implementación. Usando
+    append se puede colgar al final.
+*/
+
+
+% Ejercicio 11)
+vacio(nil).
+
+raiz(bin(_, V, _), V).
+
+altura(nil, 0).
+altura(bin(Izq, _V, Der), H) :-
+    altura(Izq, HI),
+    altura(Der, HD),
+    Max is max(HI, HD),
+    H is 1+Max.
+
+cantidadDeNodos(nil, 0).
+cantidadDeNodos(bin(Izq, _V, Der), N) :-
+    cantidadDeNodos(Izq, NI),
+    cantidadDeNodos(Der, ND),
+    N is 1+NI+ND.
+
+
+% Ejercicio 12)
+% i. inorder(+AB, -Lista)
+/*
+    Observación: esta implementación ordena los elementos no por recorrido,
+    sino por su valor en sí (había malinterpretado la consigna).
+    inorder(A , Ls) :-
+        listaDeAB(A, Ms),    
+        msort(Ms, Ls).
+
+    listaDeAB(nil, []).
+    listaDeAB(bin(Izq, V, Der), [V | Resto]) :-
+        listaDeAB(Izq, LI),
+        listaDeAB(Der, LD),
+        append(LI, LD, Resto).
+*/
+inorder(nil, []).
+inorder(bin(Izq, V, Der), Ls) :-
+    inorder(Izq, OI),
+    inorder(Der, OD),
+    append(OI, [V | OD], Ls).
+% Recorrido inorder de ABs: Todo izquierda a todo derecha.
+
+% ii. arbolConInorder(+Lista, -AB).
+arbolConInorder([], nil).
+arbolConInorder(L, bin(Izq, V, Der)) :-
+    append(LI, [V | LD], L),
+    arbolConInorder(LI, Izq),
+    arbolConInorder(LD, Der).
+
+% iii.
+% aBB(+T).
+aBB(nil).
+aBB(bin(Izq, V, Der)) :-
+    inorder(Izq, LI),
+    inorder(Der, LD),
+    append(LI, [V | LD], L),
+    msort(L, L).
+
+% iv.
+% aBBInsertar(+X, +T1, -T2).
+aBBInsertar(V, nil, bin(nil, V, nil)).
+aBBInsertar(V, bin(Izq, R, Der), bin(Izq, R, DerI)) :-
+    V > R,
+    aBBInsertar(V, Der, DerI).
+aBBInsertar(V, bin(Izq, R, Der), bin(IzqI, R, Der)) :-
+    V =< R,
+    aBBInsertar(V, Izq, IzqI).
+/*
+    El predicado es reversible para los dos árboles pero no para el valor a agregar,
+    porque Prolog necesita que ambos valores de la comparación en la primer cláusula
+    de los dos predicados estén instanciados.
+*/
+
+
+
+% Generate & Test:
+
+% Ejercicio 13)
+% coprimos(-X, -Y).
+coprimos(X, Y) :- generate(X, Y), gcd(X,Y) =:= 1.
+
+generate(X, Y) :- desde(0, Z), between(0, Z, X), Y is Z-X, Y>=X .
+/*
+    No genera conmutados, pero es importante que no estén instanciados los
+    dos parámetros a la vez, pues en ese caso se puede llegar a colgar al
+    pedir más soluciones o que no sean coprimos los instanciados.
+*/
+
+
+% Ejercicio 14)
+% i. cuadradoSemiMagico(+N, -XS).
+cuadradoSemiMagico(0, []).
+cuadradoSemiMagico(N, L) :-
+    desde(0, X),
+    generarNListasDeMElemsQueSumanS(N, N, X, L).    
+
+generarNElemsQueSumanS(0, 0, []).
+generarNElemsQueSumanS(N, S, [E | Resto]) :-
+    N > 0,
+    S >= 0,
+    between(0, S, E),
+    SmE is S - E,
+    Nm1 is N - 1,
+    generarNElemsQueSumanS(Nm1, SmE, Resto).
+
+generarNListasDeMElemsQueSumanS(0, _, _, []).
+generarNListasDeMElemsQueSumanS(N, M, S, [L | Ls]) :-
+    generarNElemsQueSumanS(M, S, L),
+    Nm1 is N-1,
+    length(Ls, Nm1),
+    generarNListasDeMElemsQueSumanS(Nm1, M, S, Ls).
+
+/*
+todasSuman([], _).
+todasSuman([L | Ls], S) :-
+    sum_list(L, S),
+    todasSuman(Ls, S).
+*/
+
+% ii. cuadradoMagico(+N, -XS).
+cuadradoMagico(0, []).
+cuadradoMagico(N, L) :-
+    desde(0, X),
+    generarNListasDeMElemsQueSumanS(N, N, X, L),
+    todasColumnasSuman(X, L).
+
+todasColumnasSuman(Suma, Matriz) :-
+    length(Matriz, N),
+    sumasColumnas(Suma, N, Matriz).
+
+sumasColumnas(_, 0, _).
+sumasColumnas(Suma, Columna, Matriz) :-
+    sumaColumna(Suma, Columna, Matriz),
+    Cm1 is Columna-1,
+    sumasColumnas(Suma, Cm1, Matriz).
+
+% sumaColumna(?Columna, +Suma, +Matriz).
+sumaColumna(0, _, []).
+sumaColumna(Suma, Columna, [L | Ls]) :-
+    Suma >= 0,
+    nth1(Columna, L, N),
+    SmN is Suma-N,
+    sumaColumna(SmN, Columna, Ls).
+
+% Dejado en el ejercicio 14 hecho.
