@@ -253,7 +253,7 @@ reparto(X, 1, [X]).
 reparto(L, N, [X | Ls]) :-
     N > 1,
     M is N-1,
-    append(X, Xs, L), % Esta es la línea clave que no ví. Confiar en la lógica para asumir que Xs es el resto del problema.
+    append(X, Xs, L),
     reparto(Xs, M, Ls).
 % vi.
 % repartoSinVacias(+L, -LListas).
@@ -455,3 +455,164 @@ sumaColumna(Suma, Columna, [L | Ls]) :-
     sumaColumna(SmN, Columna, Ls).
 
 % Dejado en el ejercicio 14 hecho.
+
+% LO SIGUIENTE ES LO DE OCTOKERBS:
+
+%-------------------------------------------------
+% esTriángulo(+T)
+esTriangulo(tri(A, B, C)) :- A < B+C, B < C+A, C < A+B.
+
+% perímetro(?T,?P)
+perimetro(tri(A,B,C),P) :- ground(tri(A,B,C)), esTriangulo(tri(A,B,C)), P is A+B+C.
+perimetro(tri(A,B,C),P) :- not(ground(tri(A,B,C))), armarTriplas(P,A,B,C), esTriangulo(tri(A,B,C)).
+
+armarTriplas(P,A,B,C) :- desdeReversible(3,P), between(0,P,A), S is P-A, between(0,S,B), C is S-B.
+
+triangulos(T) :- perimetro(T,_).
+%-------------------------------------------------
+frutal(frutilla).
+frutal(banana).
+frutal(manzana).
+cremoso(banana).
+cremoso(americana).
+cremoso(frutilla).
+cremoso(dulceDeLeche).
+
+% leGusta(X)
+leGusta(X) :- frutal(X), cremoso(X).
+
+% cucurucho(X,Y)
+cucurucho(X,Y) :- leGusta(X), leGusta(Y).
+
+% ?- cucurucho(X,Y)
+% Se unifica con las variables de leGusta(X) y leGusta(Y).
+% en leGusta(X), X unifica con la variable de frutal y la de cremoso
+% X de frutal es instanciado como frutilla.
+% X de cremoso es resolvente con cremoso(frutilla).
+% X de leGusta se instancia como frutilla.
+% X de cucurucho se instancia con frutilla,
+% se puede instanciar lo mismo con Y.
+% Se empieza a hacer backracking con respecto a Y, dejamos de instanciar la Y como frutilla e instaanciamos un nuevo
+% frutal, el sigueinte es banana. Despues de banana , como es resolvente con cremoso(banana), se instancia en cucurucho.
+% como no existe otro frutal que sea cremoso, se hace backtracking de y se prueba una nueva instanciacion de X.
+
+% 2. 
+
+% cucurucho(X,Y) :- leGusta(X), !, leGusta(Y).
+% Si leGusta(X) encuentra alguna instancia para X entonces se sigue para adelante y no se buscan mas instancias.
+% es como una pared que separa la instanciacion actual de mas instanciaciones.
+
+% cucurucho(X,Y) :- leGusta(X), leGusta(Y), !.
+% Si leGusta(X) encuentra alguna instancia para X y leGusta(Y) encuentra una para Y entonces listo, terminamos.
+
+% leGusta(X) :- frutal(X), !, cremoso(X).
+% despues de un frutal solo vemos si es cremoso.
+
+% leGusta(X) :- frutal(X), cremoso(X), !.
+% despues de un frutal y cremoso terminamos, solo queremos uno.
+
+%% Literalmente copie lo que hice cuando rendi la materia, ni ganas de pensar en este ejercicio repetitivo.
+%-------------------------------------------------
+% P(?X) 
+
+% Q(?X)
+
+% ?- P(Y), not(Q(Y))
+
+% 1. Significa que queremos un Y tal que P la instancie pero Q no pueda instanciarla.
+
+% 2. Si se invierte el orden prolog va a buscar la NO instanciacion de Y con respecto a Q. Esto solo es verdadero si no existe base de conocimientos de Q. Pero 
+% si la base de conocimiento no existe entonces prolog falla porque no se pudo instanciar a Y. EL NOT NO SIRVE PARA INSTANCIAR.
+
+% 3. P(Y), not((P(X), X \= Y))
+%-------------------------------------------------
+% corteMásParejo(+L,-L1,-L2)
+corteMásParejo(L, L1, L2) :- corte(L, L1, L2, D1), not((corte(L, _, _, D2), D2 < D1)).
+
+corte(L, L1, L2, D) :- append(L1, L2, L), sum_list(L1, S1), sum_list(L2, S2), D is abs(S1-S2).
+%-------------------------------------------------
+p(X) :- mod(X,2) =:= 0.
+
+minimoNatural(X) :- desdeReversible(1, X), p(X), not((between(1,X,Y), p(Y), Y < X)),!.
+%-------------------------------------------------
+% divisores(N1, N2, L)
+divisores(X, N2, [X | XS]) :- X =< N2, mod(N2,X) =:= 0, N3 is X + 1, divisores(N3, N2, XS).
+divisores(N1, N2, XS) :- N1 =< N2, mod(N2,N1) =\= 0, N3 is N1 + 1, divisores(N3, N2, XS).
+divisores(N, N, [N]).
+
+% esPrimo(N).
+esPrimo(N) :- divisores(1, N, L), length(L, X), X =:= 2, !. % Los numeros primos solo tienen 2 divisores. 1 y si mismos.
+
+% próximoNumPoderoso(+X,-)
+proximoNumPoderoso(X,M) :- X2 is X + 1, desdeReversible(X2, M), divisores(1, M, D), not((member(P, D), esPrimo(P), not((0 is mod(M, P), 0 is mod(M, P*P))))), !.
+
+% Para algun M mayor a X existe una lista de divisores D tal que ninguno de sus primos no divida a M y su cuadrado tampoco.
+%-------------------------------------------------
+% natural(N).
+natural(cero).
+natural(suc(X)) :- natural(X).
+
+% pertenece(?Elemento, +Conjunto)
+pertenece(X, [X | _]).
+pertenece(Y, [X | XS]) :- Y =\= X, pertenece(Y, XS).
+
+% conjuntoDeNaturales(X)        
+conjuntoDeNaturales(X) :- not( (pertenece(N,X), not( natural(N) )) ).
+
+% No uses numeros. Ejemplo: conjuntoDeNaturales([suc(cero),suc(suc(cero)),suc(suc(suc(cero)))]).
+%-------------------------------------------------
+:- ensure_loaded('Ejercicio8.pl').      % Importamos el predicado 'borrar' para eliminar los nodos que ya se usaron en el grafo.
+
+% Con getGrafo(conexo, G) obtenemos instanciado en G el grafo. Sirve para testear las consultas. 
+% Ejemplo. La consulta 'getGrafo(conexo, G), esNodo(G, X)' instancia en G el grafo de abajo e instancia en X cada nodo.
+getGrafo(conexo, grafo([1, 2, 3, 4, 5],[arista(1, 2), arista(2, 3), arista(2, 4), arista(3, 5),arista(4, 5)])).
+getGrafo(disconexo, grafo([1, 2, 3, 4, 5, 6, 7],[arista(1, 2), arista(2, 3), arista(2, 4), arista(3, 5),arista(4, 5), arista(6,7)])).
+getGrafo(estrella, grafo([1, 2, 3, 4, 5, 6, 7],[arista(1, 2), arista(1, 3), arista(1, 4), arista(1, 5),arista(1, 6), arista(1,7)])).
+
+% --- Ejercicios ---
+
+% nodos
+nodosDe(grafo(V, _), V).
+
+% aristas
+aristasDe(grafo(_,E), E).
+
+% esNodo(+G,?X)
+esNodo(G, X) :- ground(G), nodosDe(G, V), member(X, V).
+
+% esArista(+G,?X,?Y)
+esArista(G, X, Y) :- ground(G), nonvar(X), nonvar(Y), aristasDe(G, E), member(arista(X,Y), E).    % Caso arista instanciada.
+esArista(G, X, Y) :- ground(G), nonvar(X), nonvar(Y), aristasDe(G, E), member(arista(Y,X), E).    % Caso arista instanciada invertida.
+esArista(G, X, Y) :- ground(G), nonvar(X), var(Y), aristasDe(G, E), member(arista(X,Y), E).       % Caso solo X instanciado.
+esArista(G, X, Y) :- ground(G), nonvar(X), var(Y), aristasDe(G, E), member(arista(Y,X), E).       % Caso solo X instanciado invertido.
+esArista(G, X, Y) :- ground(G), var(X), nonvar(Y), aristasDe(G, E), member(arista(X,Y), E).       % Caso solo Y instanciado.
+esArista(G, X, Y) :- ground(G), var(X), nonvar(Y), aristasDe(G, E), member(arista(Y,X), E).       % Caso solo Y instanciado invertido.
+esArista(G, X, Y) :- ground(G), var(X), var(Y), aristasDe(G, E), member(arista(X,Y), E).          % Caso ningún nodo instanciado. Se instancian todas las aristas.
+
+% caminoSimple(+G,+D,+H,?L)
+caminoSimple(_, H, H, [H]).
+caminoSimple(G, D, H, [D | L]) :- esArista(G, D, N), esNodo(G, N), nodosDe(G, V), borrar(V, D, V2), aristasDe(G, E), caminoSimple(grafo(V2, E), N, H, L).
+
+% caminoHamiltoniano(+G,?L)
+caminoHamiltoniano(G, L) :- caminoSimple(G, _, _, L), length(L, N1), nodosDe(G, V), length(V, N2), N1 =:= N2. 
+
+% esConexo(+G)
+esConexo(G) :- not((esNodo(G, X), esNodo(G, Y), X \= Y, not((caminoSimple(G, X, Y, _))))). % No existen dos nodos tal que no exista camino simple entre ambos.
+
+% esEstrella(+G)
+esEstrella(G) :- esConexo(G), esNodo(G, X), not((esNodo(G, Y), X \= Y, not((esArista(G,X,Y))))). % Existe un nodo tal que no existe otro nodo que no sea arista de este.
+%-------------------------------------------------
+% generarNodos(+N, -A)
+generarNodos(0, nil).
+generarNodos(N, bin(AI, _, AD)) :- N > 0, K is N-1, between(0, K, NI), ND is K-NI, generarNodos(NI,AI), generarNodos(ND, AD). 
+
+% arbol(-A)
+arbol(A) :- desde(0, X), generarNodos(X, A).
+
+% nodosEn(?A, +L)
+nodosEn(nil, _).
+nodosEn(bin(AI, R, AD), L) :- member(R, L), nodosEn(AI, L), nodosEn(AD, L).
+
+% sinRepEn(-A, +L)
+sinRepEn(nil, _).
+sinRepEn(bin(AI, R, AD), L) :- append(L1, [R | L2], L), sinRepEn(AI, L1), sinRepEn(AD, L2).
