@@ -129,7 +129,7 @@ filter' :: (a -> Bool) -> [a] -> [a]
 filter' f = foldr (\x rec -> if f x then x : rec else rec) []
 
 map' :: (a -> b) -> [a] -> [b]
-map' f = foldr (\x -> (:) (f x)) []
+map' f = foldr ((:) . f) []
 
 mejorSegun :: (a -> a -> Bool) -> [a] -> a
 mejorSegun f = foldr1 (\x rec -> if f x rec then x else rec)
@@ -357,6 +357,14 @@ altura = foldAB (\hIzq _ hDer -> 1 + max hIzq hDer) 0
 cantNodos :: AB a -> Int
 cantNodos = foldAB (\nIzq _ nDer -> 1 + nIzq + nDer) 0
 
+
+
+
+
+
+
+-- Ejercicios pendientes: 4, 7, 8, 9, 10, 11, 13 en adelante
+
 -- Repaso pre primer recuperatorio:
 
 -- Teórica 1:
@@ -369,7 +377,6 @@ cantNodos = foldAB (\nIzq _ nDer -> 1 + nIzq + nDer) 0
     map filter [a -> Bool] -> [[a] -> [a]]
 -}
 
--- Ejercicios pendientes: 4, 7, 8, 9, 10, 11, 13 en adelante
 
 reversa :: [a] -> [a]
 reversa = foldr (\x rec -> rec ++ [x]) [] -- A cada elemento de la lista, lo vamos agregando al final.
@@ -401,7 +408,7 @@ reversa = foldr (\x rec -> rec ++ [x]) [] -- A cada elemento de la lista, lo vam
         zip (x : xs) (y : ys) = (x, y) : zip xs ys
 -}
 cierre :: [a] -> [b] -> [(a, b)]
-cierre xs ys = foldrWithFoldl f (const []) xs ys
+cierre xs ys = foldr f (const []) xs ys
   where
     f x r [] = []
     f x r (y : ys) = (x, y) : r ys
@@ -446,3 +453,76 @@ foldrWithFoldl f z xs = foldl (flip f) z (reverse xs)
 -- Para testear foldl
 bin2dec :: [Int] -> Int
 bin2dec = foldlWithFoldr (\ ac b -> b + 2 * ac) 0
+
+{-
+    Ejercicio 4)
+
+    i) Definir la función permutaciones :: [a] -> [[a]] que dada una lista devuelve todas sus permutaciones. Se recomienda usar:
+    concatMap :: (a -> [b]) -> [a] -> [b]
+    take :: Int -> [a] -> [a]
+    drop :: Int -> [a] -> [a]
+
+    ii) Definir la función partes, que recibe una lista L y devuelve la lista de todas listas con elementos de L en el mismo orden de aparición
+    
+    iii) Definir la función prefijos, que dada una lista devuelve todos sus prefijos
+    
+    iv) Definir la función sublistas que, dada una lista, devuelve todas las sublistas de la misma
+-}
+
+permutaciones :: [a] -> [[a]]
+permutaciones = foldr (\x rec -> concatMap (\xs -> map (\i -> take i xs ++ [x] ++ drop i xs) [0 .. length xs]) rec) [[]]
+
+permutacionesExplicita :: [a] -> [[a]]
+permutacionesExplicita []     = [[]]
+permutacionesExplicita (x:xs) = concatMap (\ys -> map (\i -> take i ys ++ [x] ++ drop i ys) [0 .. length ys]) (permutacionesExplicita xs)
+
+-- En mi paso recursivo cuento con la lista de todas las permutaciones de lo que me queda
+-- Por lo tanto, tengo que meter mi elemento en cada una de las posiciones disponibles
+-- Para eso, a cada lista lo que le hago es aplicarle una indexación mediante map, e ir metiendo el elemento entre cada "tomar y agarrar"
+
+partes :: [a] -> [[a]]
+partes = foldr (\x r -> concatMap (\a -> [a, x:a]) r) [[]]
+
+-- partes :: [a] -> [[a]]
+-- partes = foldr (\x rec -> map (x :) rec ++ rec) [[]]
+
+partesExplicita :: [a] -> [[a]]
+partesExplicita [] = [[]]
+partesExplicita (x : xs) = concatMap (\a -> [a, x:a]) (partesExplicita xs)
+
+prefijos :: [a] -> [[a]]
+prefijos = foldl (\ac x -> ac ++ [last ac ++ [x]]) [[]]
+
+-- Sin la lista vacia
+sufijos :: [a] -> [[a]]
+sufijos xs = [take i (drop j xs) | i <- [1..length xs], j <- [0.. length xs], i+j == length xs]
+
+sublistas :: [a] -> [[a]]
+sublistas xs = [] : concatMap sufijos (prefijos xs)
+
+
+-- Ejercicio 7)
+
+-- i) mapPares, versión de map que toma una función currificada de dos args y una lista de pares de valores,
+-- y devuelve la lista de aplicaciones de la función a cada par. Recordar curr y uncurry.
+mapPares :: (a -> b -> c) -> [(a, b)] -> [c]
+mapPares f = map (uncurry f)
+
+-- ii) armarPares, que dadas dos listas arma una lista de pares que contiene, en cada posición,
+-- el elemento correspondiente a esa posición en cada una de las listas. Si una de las listas
+-- es más larga que la otra, se ignorarán los elementos sobrantes.
+-- Esta es la función cierre, pero vamos a intentar rehacerla.
+armarPares :: [a] -> [b] -> [(a, b)]
+armarPares = foldr (\x r ys -> if null ys then [] else (x, head ys) : r (tail ys)) (const [])
+-- Notar que el acumulador del foldr no es una lista, sino una funcion aplicada parcialmente.
+
+-- iii) mapDoble, funcionalmente igual a zipWith del preludio.
+mapDoble :: (a -> b -> c) -> [a] -> [b] -> [c]
+mapDoble f xs ys = mapPares f (armarPares xs ys)
+
+zip' :: [b] -> [a] -> [(a,b)]
+zip' ys [] = []
+zip' ys (x:xs) = if null ys then [] else (x, head ys):zip' (tail ys) xs
+
+intersect :: Eq a => [a] -> [a] -> [a]
+intersect xs ys = filter (`elem` ys) xs
