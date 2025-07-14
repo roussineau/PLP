@@ -335,6 +335,7 @@ insertarOrdenado x = recr (\y ys rec -> if y >= x then x : y : ys else y : rec) 
 -- Ejercicio 12:
 data AB a = Nil | Bin (AB a) a (AB a) deriving (Show)
 
+-- i)
 foldAB :: (b -> a -> b -> b) -> b -> AB a -> b
 foldAB f base Nil = base
 foldAB f base (Bin izq v der) = f (foldAB f base izq) v (foldAB f base der)
@@ -343,19 +344,59 @@ recAB :: (b -> AB a -> a -> AB a -> b -> b) -> b -> AB a -> b
 recAB f base Nil = base
 recAB f base (Bin izq v der) = f (recAB f base izq) izq v der (recAB f base der)
 
+-- ii)
 esNil :: AB a -> Bool
 esNil Nil = True
 esNil _ = False
-
-alturaExpl :: AB a -> Int
-alturaExpl Nil = 0
-alturaExpl (Bin izq v der) = 1 + max (alturaExpl izq) (alturaExpl der)
 
 altura :: AB a -> Int
 altura = foldAB (\hIzq _ hDer -> 1 + max hIzq hDer) 0
 
 cantNodos :: AB a -> Int
 cantNodos = foldAB (\nIzq _ nDer -> 1 + nIzq + nDer) 0
+
+-- iii)
+raizAB :: AB a -> a
+raizAB (Bin _ r _) = r
+
+mejorSegunAB :: (a -> a -> Bool) -> AB a -> a
+mejorSegunAB p ab = foldAB (\ri v rd -> if p ri rd then (if p v ri then v else ri) else (if p v rd then v else rd)) (raizAB ab) ab
+
+-- iv)
+esABBExplicito :: Ord a => AB a -> Bool
+esABBExplicito Nil = True
+esABBExplicito (Bin i r d) = esABBExplicito i && esABBExplicito d && (esNil i || raizAB i <= r) && (esNil d || raizAB d > r)
+
+esABB :: Ord a => AB a -> Bool
+esABB = recAB (\ri ai v ad rd -> ri && rd && (esNil ai || raizAB ai <= v) && (esNil ad || raizAB ad > v)) True
+
+abb :: Num a => AB a
+abb = Bin (Bin (Bin Nil 1 Nil) 2 (Bin Nil 4 Nil)) 5 (Bin Nil 7 Nil)
+abb2 :: Num a => AB a
+abb2 = Bin (Bin (Bin Nil 1 Nil) 1 (Bin Nil 4 Nil)) 5 (Bin (Bin Nil 1 Nil) 7 Nil)
+
+-- v)
+{-
+    Para esNil no necesitamos usar recursión.
+    
+    Para altura, usamos estructural porque no nos sirve revisar el árbol antes de la recursión.
+    
+    Para cantNodos igual.
+    
+    Para mejorSegún también usamos estructural, porque solo necesitamos recurrir al mejor según los casos recursivos y comparar con la raíz.
+    
+    Para esABB usamos primitiva, porque los casos recursivos verifican que tanto el subarbol izquierdo como el derecho de cada nodo sean ABB,
+    y necesitamos comparar las raíces entre sí mediante las funciones de mayor y menor igual, que son de tipo a->Bool, lo cual no se puede
+    hacer con recursión estructural.
+-}
+
+
+
+
+
+
+
+
 
 
 
@@ -526,3 +567,174 @@ zip' ys (x:xs) = if null ys then [] else (x, head ys):zip' (tail ys) xs
 
 intersect :: Eq a => [a] -> [a] -> [a]
 intersect xs ys = filter (`elem` ys) xs
+
+
+-- Parcial: Ejercicio 1
+
+data ABNV a = Hoja a | Uni a (ABNV a) | Bi (ABNV a) a (ABNV a) deriving Show
+-- Cantidad de hijos: 0, 1 y 2 respectivamente.
+
+abnv :: ABNV Int
+abnv = Bi (Uni 2 (Hoja 1)) 3 (Bi (Hoja 4) 5 (Uni 2 (Hoja 7))) 
+
+-- a)
+foldABNV :: (a -> b) -> (a -> b -> b) -> (b -> a -> b -> b) ->  ABNV a -> b
+foldABNV fHoja fUni fBi abnv = case abnv of
+        Hoja a -> fHoja a
+        Uni a b -> fUni a (foldABNV fHoja fUni fBi b)
+        Bi b a c -> fBi (foldABNV fHoja fUni fBi b) a (foldABNV fHoja fUni fBi c)
+
+recABNV :: (a -> b) -> (a -> ABNV a -> b -> b) -> (ABNV a -> b -> a -> ABNV a -> b -> b) -> ABNV a -> b
+recABNV fHoja fUni fBi abnv = case abnv of 
+    Hoja a -> fHoja a
+    Uni a b -> fUni a b (recABNV fHoja fUni fBi b)
+    Bi b a c -> fBi b (recABNV fHoja fUni fBi b) a c (recABNV fHoja fUni fBi c)
+
+-- b)
+elemABNV :: Eq a => a -> ABNV a -> Bool
+elemABNV a = foldABNV fHoja fUni fBi -- Consultar sobre si fHoja representa un caso base así como en foldr, solo que ahí es el valor directamente porque no tenemos elementos para trabajar con la lista vacía.
+    where
+        fHoja r = r == a
+        fUni r h = a == r || h
+        fBi i r d = a == r || i || d
+
+-- c)
+reemplazarUno :: Eq a => a -> a -> ABNV a -> ABNV a
+reemplazarUno x y = recABNV fHoja fUni fBi
+    where
+        fHoja v = if x == v then Hoja y else Hoja v
+        fUni v h r = if x == v then Uni y h else Uni x r
+        fBi i r1 v d r2 = if x == v then Bi i y d else (if elemABNV x i then Bi r1 v d else Bi i v r2)
+
+-- d)
+valorRaiz :: ABNV a -> a
+valorRaiz (Hoja r) = r
+valorRaiz (Uni r h) = r
+valorRaiz (Bi i r d) = r
+
+nivelExplicito :: ABNV a -> Int -> [a]
+-- La pista sugiere que el caso base devuelva una función en lugar de una lista
+nivelExplicito abnv 0 = [valorRaiz abnv]
+nivelExplicito abnv n
+    | n < 0 = []
+    | n > 0 = case abnv of
+        Hoja r -> []
+        Uni r h -> nivelExplicito h (n-1)
+        Bi i r d -> nivelExplicito i (n-1) ++ nivelExplicito d (n-1)
+
+nivel :: ABNV a -> Int -> [a]
+nivel = foldABNV fHoja fUni fBi
+    where
+        fHoja r = \n -> if n == 0 then [r] else []
+        fUni r h = \n -> if n == 0 then [r] else h (n-1)
+        fBi i r d = \n -> if n == 0 then [r] else i (n-1) ++ d (n-1)
+
+
+-- Ejercicio 8)
+-- Matrices de ejemplo para testear:
+m1 :: [[Int]]
+m1 = [
+    [1,2,3],
+    [4,5,6],
+    [7,8,9]
+    ]
+m1t :: [[Int]]
+m1t = [
+    [1,4,7],
+    [2,5,8],
+    [3,6,9]
+    ]
+m2 :: [[Int]]
+m2 = [
+    [9,8,7],
+    [6,5,4]
+    ]
+
+-- i)
+sumaMat :: [[Int]] -> [[Int]] -> [[Int]]
+sumaMat = zipWith (zipWith (+))
+
+-- ii)
+trasponer :: [[Int]] -> [[Int]]
+trasponer [] = []
+trasponer m = foldr (zipWith (:)) (replicate (length (head m)) []) m
+
+
+-- Ejercicio 9)
+-- i)
+foldNat :: (Int -> a -> a) -> a -> Int -> a
+foldNat _ b 0 = b
+foldNat f b n = f n (foldNat f b (n-1))
+
+-- ii)
+-- potencia x n = x^n
+potencia :: Int -> Int -> Int
+potencia x = foldNat (\i r -> x*r) 1
+
+
+-- Ejercicio 10)
+-- i)
+genLista :: a -> (a -> a) -> Integer -> [a]
+genLista e inc n 
+    | n <= 0 = []
+    | n > 0 = foldInteger (\i r -> r ++ [inc (last r)]) [e] (n-1)
+-- Lo hice únicamente por seguir la signatura de la consigna:
+foldInteger :: (Integer -> a -> a) -> a -> Integer -> a
+foldInteger _ b 0 = b
+foldInteger f b n = f n (foldInteger f b (n-1))
+
+-- ii)
+desdeHasta :: Integer -> Integer -> [Integer]
+desdeHasta a b = genLista a (+1) (b - a + 1)
+
+-- Ejercicio 11)
+data Polinomio a = X
+                | Cte a
+                | Suma (Polinomio a) (Polinomio a)
+                | Prod (Polinomio a) (Polinomio a)
+
+foldPoli :: b -> (a -> b) -> (b -> b -> b) -> (b -> b -> b) -> Polinomio a -> b
+foldPoli fX fCte fSuma fProd poli = case poli of
+    X -> fX    -- Representa evaluar en X igual a algo
+    Cte a -> fCte a   -- Constante
+    Suma a b -> fSuma (r a) (r b)
+    Prod a b -> fProd (r a) (r b)
+    where r = foldPoli fX fCte fSuma fProd
+
+evaluar :: Num a => a -> Polinomio a -> a
+evaluar a = foldPoli a fCte fSuma fProd
+    where
+        fCte k = k
+        fSuma a b = a + b 
+        fProd a b = a * b
+
+
+-- Ejercicio 13)
+
+-- i)
+-- En esta estamos considerando al Nil como parte del camino, y por eso da duplicados
+-- (todas las hojas son Nil, ya que cada Bin que debería ser hoja tiene dos hijos Nil)
+ramasConNil :: AB a -> [[a]]
+ramasConNil = foldAB (\ri v rd -> map (v :) ri ++ map (v :) rd) [[]]
+-- Para sacar duplicados:
+-- ramas :: Eq a => AB a -> [[a]]
+-- ramas a = foldr (\l r -> if l `elem` r then r else l:r) [] (ramasConNil a)
+
+ramasConRec :: AB a -> [[a]]
+ramasConRec = recAB (\ri ai v ad rd -> if esNil ai && esNil ad then [[v]] else map (v :) ri ++ map (v :) rd) []
+
+ramasConFold :: AB a -> [[a]]
+ramasConFold = foldAB (\ri v rd -> if null ri && null rd then [[v]] else map (v :) ri ++ map (v :) rd) []
+
+cantHojas :: AB a -> Int
+cantHojas = foldAB (\ri _ rd -> if ri == 0 && rd == 0 then 1 else rd + ri) 0
+
+espejo :: AB a -> AB a
+espejo = foldAB (\ri v rd -> Bin rd v ri) Nil
+
+-- ii)
+mismaEstructura :: AB a -> AB a -> Bool
+mismaEstructura = foldAB (\ri _ rd a -> case a of Bin i _ d -> ri i && rd d 
+                                                  Nil -> False) esNil
+
+
