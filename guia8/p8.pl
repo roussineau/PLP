@@ -459,8 +459,8 @@ cucurucho(X,Y) :- leGusta(X), leGusta(Y).
 % Ejercicio 18)
 % corteMasParejo(+L, -L1, -L2)
 corteMasParejo(L, L1, L2) :-
-    sum_list(L, Suma),
-    between(0, Suma, Diferencia),
+    % sum_list(L, Suma),
+    % between(0, Suma, Diferencia),
     corteConDif(L, L1, L2, Diferencia),
     not((corteConDif(L, _, _, Mayor), Mayor<Diferencia)).
 
@@ -472,12 +472,15 @@ corteConDif(L, L1, L2, Dif) :-
     abs(D, Dif).
 
 
-% Ejercicio 19)
+% Ejercicio 19) En hoja
+
+
+% Ejercicio 20)
 
 % proximoNumeroPoderoso(+X, -Y)
 proximoNumeroPoderoso(X, Y) :-
     Xpp is X+1,
-    Cota is Xpp*Xpp,
+    Cota is X*X,
     between(Xpp, Cota, Y),
     todosFactoresAlMenosCuadrados(Y),
     not((between(Xpp, Y, Z), todosFactoresAlMenosCuadrados(Z), Z<Y)).
@@ -505,3 +508,39 @@ sacarFactores(X, P, Res) :-
     Rec is X / P,
     sacarFactores(Rec, P, Res).
 
+
+% Ejercicio 21) conjuntoDeNaturales(X) :- not((pertenece(E, X), not(natural(E)))).
+
+
+% Ejercicio 22) En hoja.
+
+
+% Ejercicio 23)
+% i) 
+% arbol(-A)
+arbol(A) :- desdeReversible(0, N), generarNodos(N, A).
+
+generarNodos(0, nil).
+generarNodos(N, bin(AI, _, AD)) :-
+    N > 0,
+    K is N-1,
+    between(0, K, NI), 
+    ND is K-NI,
+    generarNodos(NI,AI),
+    generarNodos(ND, AD).
+
+% ii)
+% nodosEn(?A, +L)
+nodosEn(nil, _).
+nodosEn(bin(AI, R, AD), L) :-
+    member(R, L),
+    nodosEn(AI, L),
+    nodosEn(AD, L).
+
+% iii)
+% sinRepEn(-A, +L)
+sinRepEn(nil, _).
+sinRepEn(bin(AI, R, AD), L) :-
+    append(L1, [R | L2], L),
+    sinRepEn(AI, L1),
+    sinRepEn(AD, L2).
